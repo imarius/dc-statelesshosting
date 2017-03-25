@@ -1,0 +1,18 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="row">
+    <div class="col-md-4"></div>
+    <div class="col-md-4">
+        The Form
+        <form asp-controller="RequestHandler" asp-action="Index" method="post">    
+            <input name="HoldingName" type="text" placeholder="HoldingName" />
+            <input name="PageColor" type="text" placeholder="PageColor" />
+            <input name="UrlToImage" type="text" placeholder="UrlToImage" />
+            <input name="DomainName" type="text" placeholder="DomainName" />
+            <input type="submit" value = "Publish" />
+        </form>
+    </div>
+    <div class="col-md-4"></div>
+</div>

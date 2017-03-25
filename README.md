@@ -1,0 +1,2 @@
+# dc-statelesshosting
+[DomainConnect]StatelessHosting

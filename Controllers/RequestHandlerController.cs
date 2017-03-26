@@ -5,6 +5,7 @@ using RestSharp;
 using DnsClient;
 using System.Net;
 using StatelessHosting.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace StatelessHosting.Controllers
 {
@@ -16,15 +17,32 @@ namespace StatelessHosting.Controllers
 
         private string APIUrl { get; set; }
 
+        private HoldingDetails PageDetails { get; set; }
+
+        private string HostName
+        {
+            get
+            {
+                HostString host = HttpContext.Request.Host;
+                return host.Host;
+            }
+        }
+
+
+        private const string ClientId = "whdhackathon";
+        private const string Secret = "DomainConnectGeheimnisSecretString";
+        private const string Scope = "whd-template-1";
+
         public async System.Threading.Tasks.Task<IActionResult> Index()
         {
             var _method = HttpContext.Request.Method;
+
 
             if (_method == "GET")
                 return Redirect("/");
 
 
-            var toSend = new HoldingDetails
+            PageDetails = new HoldingDetails
             {
                 DomainName = Request.Form["DomainName"],
                 HoldingName = Request.Form["HoldingName"],
@@ -32,22 +50,47 @@ namespace StatelessHosting.Controllers
                 UrlToImage = Request.Form["UrlToImage"]
             };
 
+            var base64PageDetails = Base64Encode(JsonConvert.SerializeObject(PageDetails));
             // Try and find TXT record containing a URL used as a prefix            
-            await GetDNSRecordsAsync(toSend.DomainName);
+            await GetDNSRecordsAsync(PageDetails.DomainName);
 
-            DomainSettings = await GetDomainSettingsAsync(toSend.DomainName);
-
-            var serializedJson = JsonConvert.SerializeObject(toSend);
+            DomainSettings = await GetDomainSettingsAsync(PageDetails.DomainName);
+            var base64DSettings = Base64Encode(JsonConvert.SerializeObject(DomainSettings));
+            
+            var serializedJson = JsonConvert.SerializeObject(PageDetails);
             var base64EncodedString = Base64Encode(serializedJson);
 
             ViewBag.provider = DomainSettings.ProviderName;
 
             ViewBag.url = DomainSettings.UrlSyncUX + "/v2/domainTemplates/providers/WHDHackathon/services/whd-template-1/apply?domain="
-                    + toSend.DomainName + "&RANDOMTEXT=" + base64EncodedString + "&IP=127.0.0.1";
+                    + PageDetails.DomainName + "&RANDOMTEXT=" + base64EncodedString + "&IP=127.0.0.1";
+
+            ViewBag.urlasync = "/RequestHandler/AsyncEndPoint/?appConf=" + base64PageDetails + "&dsets=" + base64DSettings;
 
             return View("Callback");
         }
 
+        [HttpGet]
+        public async Task<ActionResult> AsyncEndPoint(string appConf, string dsets)
+        {
+            PageDetails = JsonConvert.DeserializeObject<HoldingDetails>(Base64Decode(appConf));
+            DomainSettings = JsonConvert.DeserializeObject<DomainSetting>(Base64Decode(dsets));
+
+            var endpoint = "/v2/domainTemplates/providers/WHDHackathon/services/whd-template-1?domain=" +
+                 PageDetails.DomainName + "&client_id=" + ClientId + "&redirect_url=http://" + HostName 
+                 + "/RequestHandler/Async&scope=whd-template-1";
+            return Redirect(DomainSettings.UrlAsyncUX + endpoint);
+
+            
+            // var something = await GetAsyncEndPoint(endpoint);
+            // return Ok();
+        }
+
+        public ActionResult Async(string code)
+        {
+            
+            return Ok("I GOT HERE");
+        }
         /// <summary>
         /// Populates DNSQueryResponse
         /// </summary>
@@ -106,7 +149,6 @@ namespace StatelessHosting.Controllers
             _providerEndpoint = "https://" + _providerEndpoint;
 
             var client = new RestClient(_providerEndpoint);
-            client.BaseUrl = new System.Uri(_providerEndpoint);
 
             var request = new RestRequest("/v2/" + domainName + "/settings", Method.GET);
             var response = new RestResponse();
@@ -114,6 +156,19 @@ namespace StatelessHosting.Controllers
             response = await GetResponseContentAsync(client, request) as RestResponse;
 
             return JsonConvert.DeserializeObject<DomainSetting>(response.Content);
+        }
+
+        private async Task<DomainSetting> GetAsyncEndPoint(string urlToCall)
+        {
+            var client = new RestClient(DomainSettings.UrlAsyncUX);
+
+
+            var request = new RestRequest(urlToCall, Method.GET);
+            var response = new RestResponse();
+
+            response = await GetResponseContentAsync(client, request) as RestResponse;
+            var variable = response.Content;
+            return new DomainSetting();
         }
 
         /// <summary>
@@ -125,6 +180,17 @@ namespace StatelessHosting.Controllers
         {
             var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
             return System.Convert.ToBase64String(plainTextBytes);
+        }
+
+        /// <summary>
+        /// Decode a Base64 String 
+        /// </summary>
+        /// <param name="base64EncodedData">Base64 encoded string</param>
+        /// <returns>Plain Text String</returns>
+        private static string Base64Decode(string base64EncodedData)
+        {
+            var base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
+            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         }
     }
 }

@@ -9,6 +9,7 @@ namespace StatelessHosting
         {
             var host = new WebHostBuilder()
                 .UseKestrel()
+                .UseUrls("http://statelesshosting:80")
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseIISIntegration()
                 .UseStartup<Startup>()

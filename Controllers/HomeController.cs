@@ -2,6 +2,8 @@
 using DnsClient;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using StatelessHosting.Models;
 
 namespace StatelessHosting.Controllers
 {
@@ -25,6 +27,17 @@ namespace StatelessHosting.Controllers
                 txtName = Base64Decode(response);
             }
            
+           var holdingPage = JsonConvert.DeserializeObject<HoldingDetails>(txtName);
+
+           if (holdingPage != null)
+                {
+                    ViewBag.logo = holdingPage.UrlToImage;
+                    ViewBag.background = "#" + holdingPage.PageColor;
+                    ViewBag.pageName = holdingPage.DomainName + " : " + holdingPage.HoldingName;
+                    
+                    return View("HoldingPage");
+                } 
+
             return View();
         }
 

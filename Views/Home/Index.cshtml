@@ -3,16 +3,42 @@
 }
 
 <div class="row">
+    <div class="col-md-4">
+    </div>
+    <div class="col-md-4">
+        <h1>Statelesshosting.com</h1>        
+    </div>
+    <div class="col-md-4">
+    </div>
+</div>
+<div class="row">
     <div class="col-md-4"></div>
     <div class="col-md-4">
-        The Form
-        <form asp-controller="RequestHandler" asp-action="Index" method="post">    
-            <input name="HoldingName" type="text" placeholder="HoldingName" />
-            <input name="PageColor" type="text" placeholder="PageColor" />
-            <input name="UrlToImage" type="text" placeholder="UrlToImage" />
-            <input name="DomainName" type="text" placeholder="DomainName" />
-            <input type="submit" value = "Publish" />
-        </form>
+        <form asp-controller="RequestHandler" asp-action="Index" method="post" class="form-horizontals">    
+
+        <div class="form-group">
+            <label class="control-label" for="HoldingName">Holding Page Name</label>
+            <input name="HoldingName" class="form-control" type="text" placeholder="HoldingName" />
+        </div>
+        <div class="form-group">
+            <label class="control-label" for="PageColor">Holding Page Color</label>
+            <input name="PageColor"  class="form-control jscolor" type="text" placeholder="PageColor" />
+        </div>
+
+        <div class="form-group">
+            <label class="control-label" for="UrlToImage">Holding Page Logo URL</label>
+            <input name="UrlToImage" class="form-control" type="text" placeholder="UrlToImage" />
+        </div>
+
+        <div class="form-group">
+            <label class="control-label" for="DomainName">Domain name to apply to</label>
+            <input name="DomainName" class="form-control" type="text" placeholder="DomainName" />        
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-success center-block" value = "Publish">Publish</button>        
+        </div>
     </div>
+        </form>
+    
     <div class="col-md-4"></div>
 </div>

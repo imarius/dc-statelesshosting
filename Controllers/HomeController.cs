@@ -8,14 +8,13 @@ namespace StatelessHosting.Controllers
         public IActionResult Index()
         {
             string method = HttpContext.Request.Method;
-
+            
+            
             //Return normal view when GET is called.
             if (method == "GET")
                 return View();
 
             //Populate holding object
-
-
             var holdingPage = new HoldingDetails();
             holdingPage.DomainName = "";
 

@@ -1,7 +1,10 @@
 @using StatelessHosting.Models
 
-@{
-    var featuredProduct = ViewData["FeaturedProduct"] as DomainSetting;
-}
-
-<h1>Looks like you are comming from : hello </h1>
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8 center-block">
+        <h1>Looks like you are comming from : @ViewBag.provider </h1>
+        <a class="btn btn-success" href="@ViewBag.url">Connect Domain</a>
+    </div>
+    <div class="col-md-2"></div>
+</div>

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using RestSharp;
 using DnsClient;
+using System.Net;
+using StatelessHosting.Models;
 
 namespace StatelessHosting.Controllers
 {
@@ -10,9 +12,17 @@ namespace StatelessHosting.Controllers
     {
         private IDnsQueryResponse DNSQueryResponse { get; set; }
 
-        [HttpPost]
+        private DomainSetting DomainSettings { get; set; }
+
+        private string APIUrl { get; set; }
+
         public async System.Threading.Tasks.Task<IActionResult> Index()
         {
+            var _method = HttpContext.Request.Method;
+
+            if (_method == "GET")
+                return Redirect("/");
+
             var toSend = new HoldingDetails
             {
                 DomainName = Request.Form["DomainName"],
@@ -21,21 +31,42 @@ namespace StatelessHosting.Controllers
                 UrlToImage = Request.Form["UrlToImage"]
             };
 
+            // Try and find TXT record containing a URL used as a prefix            
+            await GetDNSRecordsAsync(toSend.DomainName);
 
-            var domainSettings = await GetDomainSettingsAsync(toSend.DomainName);
+            DomainSettings = await GetDomainSettingsAsync(toSend.DomainName);
 
-            return Ok(domainSettings);
+            ViewData["settings"] = DomainSettings;
+            
+            return View("Callback");
         }
 
         /// <summary>
         /// Populates DNSQueryResponse
         /// </summary>
         /// <param name="domainName">DomainName to be queried</param>
-        public async void GetDNSRecordsAsync(string domainName)
+        public async Task GetDNSRecordsAsync(string domainName)
         {
-            var lookup = new LookupClient();
+            var lookup = new LookupClient(IPAddress.Parse("8.8.8.8"));
 
-            DNSQueryResponse = await lookup.QueryAsync(domainName, QueryType.TXT);
+            DNSQueryResponse = await lookup.QueryAsync("_domainconnect."+domainName, QueryType.CNAME);
+
+            var _cnameRecord = string.Empty;
+            foreach (var _answer in DNSQueryResponse.Answers) {
+                _cnameRecord = _answer.RecordToString();
+            }
+
+            //GET Text Record of the CNAME
+
+            if (!string.IsNullOrEmpty(_cnameRecord))
+            {
+                DNSQueryResponse = await lookup.QueryAsync(_cnameRecord, QueryType.TXT);
+
+                foreach (var _answer in DNSQueryResponse.Answers)
+                {
+                    APIUrl = _answer.RecordToString();
+                } 
+            }
         }
 
         /// <summary>
@@ -61,10 +92,15 @@ namespace StatelessHosting.Controllers
         /// <returns></returns>
         private async Task<DomainSetting> GetDomainSettingsAsync(string domainName)
         {
-            var client = new RestClient();
-            client.BaseUrl = new System.Uri("https://domainconnect.api.godaddy.com/v2/");
+            //Sanitize API URL
+            var _providerEndpoint = APIUrl.Replace('"', ' ');
+            _providerEndpoint = _providerEndpoint.Trim();
+            _providerEndpoint = "https://" + _providerEndpoint;            
 
-            var request = new RestRequest(domainName + "/settings", Method.GET);
+            var client = new RestClient(_providerEndpoint);
+            client.BaseUrl = new System.Uri(_providerEndpoint);
+
+            var request = new RestRequest("/v2/" + domainName + "/settings", Method.GET);
             var response = new RestResponse();
 
             response = await GetResponseContentAsync(client, request) as RestResponse;

@@ -1,4 +1,4 @@
-namespace StatelessHosting.Controllers
+namespace StatelessHosting.Models
 {
     public class HoldingDetails 
     {

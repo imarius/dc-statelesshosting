@@ -1,8 +1,8 @@
 using Newtonsoft.Json;
 
-namespace StatelessHosting.Controllers
+namespace StatelessHosting.Models
 {
-    public class DomainSetting
+    public class DomainSetting 
     {
         [JsonProperty(PropertyName = "providerName")]
         public string ProviderName { get; set; }

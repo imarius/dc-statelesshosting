@@ -27,8 +27,7 @@ namespace StatelessHosting.Controllers
                 return host.Host;
             }
         }
-
-
+        
         private const string ClientId = "whdhackathon";
         private const string Secret = "DomainConnectGeheimnisSecretString";
         private const string Scope = "whd-template-1";
@@ -62,33 +61,36 @@ namespace StatelessHosting.Controllers
 
             ViewBag.provider = DomainSettings.ProviderName;
 
-            ViewBag.url = DomainSettings.UrlSyncUX + "/v2/domainTemplates/providers/WHDHackathon/services/whd-template-1/apply?domain="
+            ViewBag.url = DomainSettings.UrlSyncUX + "/v2/domainTemplates/providers/whdhackathon/services/whd-template-1/apply?domain="
                     + PageDetails.DomainName + "&RANDOMTEXT=" + base64EncodedString + "&IP=127.0.0.1";
 
-            ViewBag.urlasync = "/RequestHandler/AsyncEndPoint/?appConf=" + base64PageDetails + "&dsets=" + base64DSettings;
+            ViewBag.urlasync = "/v2/domainTemplates/providers/WHDHackathon/services/whd-template-1?domain=" +
+                 PageDetails.DomainName + "&client_id=" + ClientId + "&redirect_url=http://" + HostName
+                 + "/RequestHandler/AsyncCallback&scope=whd-template-1";
 
             return View("Callback");
         }
 
         [HttpGet]
-        public async Task<ActionResult> AsyncEndPoint(string appConf, string dsets)
+        public ActionResult AsyncCallback(string code)
         {
-            PageDetails = JsonConvert.DeserializeObject<HoldingDetails>(Base64Decode(appConf));
-            DomainSettings = JsonConvert.DeserializeObject<DomainSetting>(Base64Decode(dsets));
+            // PageDetails = JsonConvert.DeserializeObject<HoldingDetails>(Base64Decode(appConf));
+            // DomainSettings = JsonConvert.DeserializeObject<DomainSetting>(Base64Decode(dsets));
 
-            var endpoint = "/v2/domainTemplates/providers/WHDHackathon/services/whd-template-1?domain=" +
-                 PageDetails.DomainName + "&client_id=" + ClientId + "&redirect_url=http://" + HostName 
-                 + "/RequestHandler/Async&scope=whd-template-1";
-            return Redirect(DomainSettings.UrlAsyncUX + endpoint);
-
+            // var endpoint = "/v2/domainTemplates/providers/WHDHackathon/services/whd-template-1?domain=" +
+            //      PageDetails.DomainName + "&client_id=" + ClientId + "&redirect_url=http://" + HostName
+            //      + "/RequestHandler/Async&scope=whd-template-1";
             
-            // var something = await GetAsyncEndPoint(endpoint);
-            // return Ok();
+            // return Redirect(DomainSettings.UrlAsyncUX + endpoint);
+
+            return Ok("hello");
+
         }
 
         public ActionResult Async(string code)
         {
-            
+            var inboundCode = code;
+
             return Ok("I GOT HERE");
         }
         /// <summary>
@@ -98,6 +100,14 @@ namespace StatelessHosting.Controllers
         public async Task GetDNSRecordsAsync(string domainName)
         {
             var lookup = new LookupClient(IPAddress.Parse("8.8.8.8"));
+
+            DNSQueryResponse = await lookup.QueryAsync("_domainconnect." + domainName, QueryType.TXT);
+
+            var _txtRecord = string.Empty;
+            foreach (var _answer in DNSQueryResponse.Answers)
+            {
+                _txtRecord = _answer.RecordToString();
+            }
 
             DNSQueryResponse = await lookup.QueryAsync("_domainconnect." + domainName, QueryType.CNAME);
 
@@ -117,6 +127,9 @@ namespace StatelessHosting.Controllers
                 {
                     APIUrl = _answer.RecordToString();
                 }
+            } else if (!string.IsNullOrEmpty(_txtRecord))
+            {
+                APIUrl = _txtRecord;
             }
         }
 
@@ -146,7 +159,9 @@ namespace StatelessHosting.Controllers
             //Sanitize API URL
             var _providerEndpoint = APIUrl.Replace('"', ' ');
             _providerEndpoint = _providerEndpoint.Trim();
-            _providerEndpoint = "https://" + _providerEndpoint;
+
+            if (!_providerEndpoint.Contains("https"))
+                _providerEndpoint = "https://" + _providerEndpoint;
 
             var client = new RestClient(_providerEndpoint);
 
@@ -161,7 +176,6 @@ namespace StatelessHosting.Controllers
         private async Task<DomainSetting> GetAsyncEndPoint(string urlToCall)
         {
             var client = new RestClient(DomainSettings.UrlAsyncUX);
-
 
             var request = new RestRequest(urlToCall, Method.GET);
             var response = new RestResponse();
